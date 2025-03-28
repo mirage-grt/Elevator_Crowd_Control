@@ -1,1 +1,1 @@
-print("Hello, Elevator Crowd Control!")
+print("Bye, Elevator Crowd Control!")
