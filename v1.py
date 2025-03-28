@@ -31,7 +31,9 @@ CONFIG = {
     "service_account_file": "C:/Users/levak/PycharmProjects/TeamCodeX/.venv/great.json",
     "fps_display_interval": 1.0,
     "upload_batch_size": 5,
-    "enable_threading": True
+    "enable_threading": True,
+    "video_folder_id": "GREAT/videos",
+    "video_duration": 300
 }
 
 class CarpetMonitor:
@@ -62,6 +64,9 @@ class CarpetMonitor:
         self.result_frame = np.zeros((CONFIG["warped_height"], CONFIG["warped_width"], 3), dtype=np.uint8)
         self.overlay_frame = np.zeros((CONFIG["warped_height"], CONFIG["warped_width"], 3), dtype=np.uint8)
         self.image_queue = []
+        self.video_writer = None
+        self.video_start_time = 0
+        self.recording = False
 
     def setup_threading(self):
         import threading
@@ -236,6 +241,15 @@ class CarpetMonitor:
             (255, 255, 255),
             2
         )
+        cv2.putText(
+            result,
+            f"Recording: {self.recording}",
+            (10, 90),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 0, 255) if self.recording else (255, 255, 255),
+            2
+        )
         cv2.imshow("Processed", result)
         return threshold, warped, mask, percentage
 
@@ -307,6 +321,43 @@ class CarpetMonitor:
         except Exception as e:
             print(f"Error uploading image to Google Drive: {e}")
             return None, None
+
+    def start_recording(self):
+        if self.video_writer is None and self.is_calibrated:
+            current_time = datetime.now()
+            formatted_time = current_time.strftime("%H-%M-%S-%d-%m-%Y")
+            filename = f"video-{formatted_time}.mp4"
+            temp_dir = "temp_videos"
+            if not os.path.exists(temp_dir):
+                os.makedirs(temp_dir)
+            temp_path = os.path.join(temp_dir, filename)
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            self.video_writer = cv2.VideoWriter(temp_path, fourcc, 20.0, self.warped_size)
+            self.video_start_time = time.time()
+            self.recording = True
+            self.temp_video_path = temp_path
+            print(f"Started recording: {filename}")
+
+    def stop_recording(self):
+        if self.video_writer is not None:
+            self.video_writer.release()
+            self.video_writer = None
+            self.recording = False
+            if self.drive:
+                try:
+                    file_metadata = {
+                        'title': os.path.basename(self.temp_video_path),
+                        'parents': [{'id': CONFIG["video_folder_id"]}]
+                    }
+                    file_drive = self.drive.CreateFile(file_metadata)
+                    file_drive.SetContentFile(self.temp_video_path)
+                    file_drive.Upload()
+                    print(f"Video uploaded: {self.temp_video_path}")
+                    os.remove(self.temp_video_path)
+                except Exception as e:
+                    print(f"Error uploading video: {e}")
+            else:
+                print("Video saved locally (Drive not connected)")
 
     def adjust_green_thresholds(self):
         print("Adjusting green detection thresholds. Press 'q' when done.")
@@ -382,6 +433,7 @@ class CarpetMonitor:
         print("  'a' - Adjust green color detection")
         print("  'l' - Load saved calibration")
         print("  's' - Save current image")
+        print("  'r' - Start/stop video recording")
         print("  'q' - Quit")
         if not self.load_calibration():
             self.auto_calibrate()
@@ -414,6 +466,11 @@ class CarpetMonitor:
                         if result:
                             _, _, _, exact_percentage = result
                             self.save_image(exact_percentage, frame)
+            elif key == ord('r'):
+                if not self.recording:
+                    self.start_recording()
+                else:
+                    self.stop_recording()
             if not grabbed:
                 print("Failed to grab frame from camera.")
                 time.sleep(0.01)
@@ -426,6 +483,11 @@ class CarpetMonitor:
                 result = self.process_frame(frame)
                 if result:
                     threshold, warped, mask, exact_percentage = result
+                    if self.recording:
+                        self.video_writer.write(warped)
+                        if current_time - self.video_start_time > CONFIG["video_duration"]:
+                            self.stop_recording()
+                            self.start_recording()
                     current_time = time.time()
                     time_since_last_save = current_time - self.last_save_time
                     if (threshold != self.current_threshold or
@@ -456,6 +518,8 @@ class CarpetMonitor:
                     2
                 )
                 cv2.imshow("Original", display_frame)
+        if self.recording:
+            self.stop_recording()
         if CONFIG["enable_threading"] and self.upload_thread and self.upload_thread.is_alive():
             print("Waiting for upload thread to finish...")
             self.upload_thread.join(timeout=3.0)
