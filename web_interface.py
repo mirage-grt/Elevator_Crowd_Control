@@ -11,15 +11,13 @@ from rpi_camera_integration import CarpetMonitor, CONFIG
 import os
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Change this to a secure secret key
+app.secret_key = 'your-secret-key-here' 
 
-# Global variables
 monitor = None
 output_queue = queue.Queue()
 frame_queue = queue.Queue()
 is_running = False
 
-# Custom stdout handler to capture terminal output
 class OutputHandler:
     def __init__(self, queue):
         self.queue = queue
@@ -28,7 +26,7 @@ class OutputHandler:
     def write(self, text):
         if isinstance(text, bytes):
             text = text.decode('utf-8')
-        if text.strip():  # Only queue non-empty lines
+        if text.strip(): 
             timestamp = datetime.now().strftime("%H:%M:%S")
             self.queue.put(f"[{timestamp}] {text.strip()}")
             self.buffer.write(text)
@@ -36,7 +34,6 @@ class OutputHandler:
     def flush(self):
         self.buffer.flush()
 
-# Redirect stdout to our custom handler
 sys.stdout = OutputHandler(output_queue)
 
 def generate_frames():
@@ -45,14 +42,13 @@ def generate_frames():
             frame = frame_queue.get()
             if frame is None:
                 break
-            # Resize frame for web display if needed
             frame = cv2.resize(frame, (640, 480))
             ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
             if not ret:
                 continue
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-        time.sleep(0.05)  # Reduced delay for smoother video
+        time.sleep(0.05) 
 
 @app.route('/')
 def index():
@@ -78,10 +74,8 @@ def login(role):
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Debug output
         sys.stdout.write(f"Login attempt - Role: {role}, Username: {username}\n")
         
-        # Simple authentication (replace with proper authentication)
         if role == 'admin':
             if username == 'admin' and password == 'admin':
                 session['role'] = 'admin'
@@ -98,8 +92,7 @@ def login(role):
                 sys.stdout.write("User login failed - Invalid credentials\n")
         
         return render_template('login.html', role=role, error='Invalid credentials', local_ip=get_local_ip())
-    
-    # Clear any existing session when showing login page
+
     session.clear()
     return render_template('login.html', role=role, local_ip=get_local_ip())
 
@@ -144,7 +137,6 @@ def get_cli_output():
 def send_cli_command():
     command = request.json.get('command', '').strip()
     if command:
-        # Process command and add to output queue
         if command.lower() == 'start':
             start_monitor()
             sys.stdout.write("Starting monitor...\n")
@@ -156,7 +148,6 @@ def send_cli_command():
                 sys.stdout.write("Starting calibration...\n")
                 sys.stdout.write("Click on the four corners of the carpet area (clockwise from top-left)\n")
                 sys.stdout.write("Press ESC to cancel\n")
-                # Get a frame and start calibration
                 ret, frame = monitor.camera.read()
                 if ret:
                     monitor.calibrate_frame(frame)
@@ -178,7 +169,6 @@ def start_monitor():
             is_running = True
             monitor.running = True
             
-            # Try to load saved calibration points
             if os.path.exists("calibration_points.npy"):
                 sys.stdout.write("Loading saved calibration points...\n")
                 monitor.load_calibration()
@@ -197,10 +187,7 @@ def stop_monitor():
     try:
         is_running = False
         if monitor:
-            # First stop the monitor's main loop
             monitor.running = False
-            
-            # Stop video recording and upload
             if monitor.video_writer and monitor.video_writer.isOpened():
                 print("Stopping video recording and uploading...")
                 monitor.video_writer.release()
@@ -208,13 +195,9 @@ def stop_monitor():
                 if os.path.exists(video_path):
                     print(f"Uploading video to Google Drive: {monitor.current_video_filename}")
                     monitor.upload_video_to_drive(video_path)
-            
-            # Clean up resources
             if monitor.camera:
                 monitor.camera.release()
             cv2.destroyAllWindows()
-            
-            # Wait for any upload threads to finish
             if CONFIG["enable_threading"] and monitor.upload_thread and monitor.upload_thread.is_alive():
                 print("Waiting for upload thread to finish...")
                 monitor.upload_thread.join(timeout=3.0)
@@ -232,17 +215,12 @@ def monitor_thread():
         while is_running and monitor:
             ret, frame = monitor.camera.read()
             if ret:
-                # Always send the raw frame to web interface
                 frame_queue.put(frame)
-                
-                # Process frame if calibrated
                 if monitor.is_calibrated:
                     result = monitor.process_frame(frame)
                     if result:
                         threshold, warped, mask, exact_percentage = result
-                        # Ensure all information is visible on the processed frame
                         display_frame = warped.copy()
-                        # Add text with percentage and threshold
                         cv2.putText(
                             display_frame,
                             f"Green: {exact_percentage:.1f}% (T: {threshold}%)",
@@ -252,7 +230,6 @@ def monitor_thread():
                             (255, 255, 255),
                             2
                         )
-                        # Add FPS
                         cv2.putText(
                             display_frame,
                             f"FPS: {monitor.fps:.1f}",
@@ -262,7 +239,6 @@ def monitor_thread():
                             (255, 255, 255),
                             2
                         )
-                        # Add elevator status
                         status = "FULL" if threshold <= 20 else "NOT FULL"
                         status_color = (0, 0, 255) if status == "FULL" else (0, 255, 0)
                         cv2.putText(
@@ -274,13 +250,11 @@ def monitor_thread():
                             status_color,
                             2
                         )
-                        # Show processed frame in OpenCV window
                         cv2.imshow("Processed", display_frame)
                         if threshold != monitor.current_threshold:
                             monitor.save_image_async(exact_percentage, frame.copy(), threshold)
                             monitor.current_threshold = threshold
                 else:
-                    # Show original frame with calibration message in OpenCV window
                     display_frame = frame.copy()
                     cv2.putText(
                         display_frame,
@@ -291,7 +265,6 @@ def monitor_thread():
                         (0, 0, 255),
                         2
                     )
-                    # Show FPS even when not calibrated
                     cv2.putText(
                         display_frame,
                         f"FPS: {monitor.fps:.1f}",
@@ -301,18 +274,15 @@ def monitor_thread():
                         (255, 255, 255),
                         2
                     )
-                    # Show uncalibrated frame in OpenCV window
                     cv2.imshow("Original", display_frame)
             
-            # Update FPS
             monitor.update_fps()
-            # Handle OpenCV window events
             key = cv2.waitKey(1) & 0xFF
             if key == ord('c'):
                 ret, frame = monitor.camera.read()
                 if ret:
                     monitor.calibrate_frame(frame)
-            time.sleep(0.05)  # 20 FPS
+            time.sleep(0.05) 
             
     except Exception as e:
         sys.stdout.write(f"Error in monitor thread: {str(e)}\n")
