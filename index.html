@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Carpet Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+        img {
+            max-width: 100%;
+            border: 2px solid #333;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Carpet Monitor</h1>
+    <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="Camera Feed">
+    <div>
+        <button onclick="fetch('/start').then(res => res.text()).then(alert)">Start</button>
+        <button onclick="fetch('/stop').then(res => res.text()).then(alert)">Stop</button>
+    </div>
+</body>
+</html>
