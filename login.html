@@ -1,47 +1,128 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Login</title>
+    <title>Login - {{ role|title }} Panel</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #1a1a1a;
-            color: white;
+            margin: 0;
             padding: 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #fff;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
         }
         .login-container {
             background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 10px;
-            width: 300px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            width: 100%;
+            max-width: 400px;
         }
-        input, button {
+        h1 {
+            margin: 0 0 20px 0;
+            text-align: center;
+            color: #fff;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+        input {
             width: 100%;
             padding: 10px;
-            margin: 10px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 5px;
-            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #4ecdc4;
         }
         button {
-            background-color: #4CAF50;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #4ecdc4 0%, #45b7af 100%);
+            border: none;
+            border-radius: 5px;
             color: white;
+            font-size: 16px;
             cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        .error {
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .connection-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .connection-info h3 {
+            margin: 0 0 10px 0;
+            color: #fff;
+            font-size: 16px;
+        }
+        .connection-info p {
+            margin: 0 0 10px 0;
+        }
+        .connection-info code {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
         }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <h1>Login</h1>
+        <h1>{{ role|title }} Login</h1>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
         <form method="POST" action="{{ url_for('login', role=role) }}">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
             <button type="submit">Login</button>
         </form>
+        
+        <div class="connection-info">
+            <h3>Connection Information</h3>
+            <p>To access this interface from another device on the same network:</p>
+            <ol>
+                <li>Make sure the device is connected to the same network</li>
+                <li>Enter this URL in a web browser: <code>http://{{ local_ip }}:5000/{{ role }}</code></li>
+            </ol>
+            <p>Please contact your system administrator for login credentials.</p>
+        </div>
     </div>
 </body>
-</html>
+</html> 

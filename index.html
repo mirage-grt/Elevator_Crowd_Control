@@ -5,18 +5,29 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f0f0f0;
+            margin: 0;
             padding: 20px;
+            background-color: #f0f0f0;
         }
-        img {
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .video-container {
+            margin: 20px 0;
+        }
+        #videoFeed {
             max-width: 100%;
             border: 2px solid #333;
             border-radius: 5px;
         }
+        .controls {
+            margin: 20px 0;
+        }
         button {
             padding: 10px 20px;
-            margin: 10px;
+            margin: 0 10px;
             font-size: 16px;
             cursor: pointer;
             background-color: #4CAF50;
@@ -27,14 +38,64 @@
         button:hover {
             background-color: #45a049;
         }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .connection-info {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .connection-info h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .connection-info code {
+            background-color: #f5f5f5;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
-    <h1>Carpet Monitor</h1>
-    <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="Camera Feed">
-    <div>
-        <button onclick="fetch('/start').then(res => res.text()).then(alert)">Start</button>
-        <button onclick="fetch('/stop').then(res => res.text()).then(alert)">Stop</button>
+    <div class="container">
+        <h1>Carpet Monitor</h1>
+        
+        <div class="connection-info">
+            <h3>Connection Information</h3>
+            <p>To access this interface from another device:</p>
+            <ol>
+                <li>Make sure your device is connected to the same network</li>
+                <li>Open a web browser and enter:</li>
+                <code>http://{{ local_ip }}:5000</code>
+            </ol>
+        </div>
+
+        <div class="video-container">
+            <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="Camera Feed">
+        </div>
+        <div class="controls">
+            <button onclick="startMonitor()">Start Monitor</button>
+            <button onclick="stopMonitor()">Stop Monitor</button>
+        </div>
     </div>
+
+    <script>
+        function startMonitor() {
+            fetch('/start')
+                .then(response => response.text())
+                .then(message => alert(message));
+        }
+
+        function stopMonitor() {
+            fetch('/stop')
+                .then(response => response.text())
+                .then(message => alert(message));
+        }
+    </script>
 </body>
-</html>
+</html> 

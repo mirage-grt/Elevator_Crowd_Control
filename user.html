@@ -1,42 +1,144 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Elevator Monitor</title>
+    <title>Elevator Monitor - User Panel</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #1a1a1a;
-            color: white;
+            margin: 0;
             padding: 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #fff;
+            min-height: 100vh;
         }
-        img {
-            max-width: 100%;
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .status-panel {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .status-panel h2 {
+            margin-top: 0;
+            color: #fff;
+            font-size: 20px;
+        }
+        .status-item {
+            margin: 10px 0;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
         }
-        .status {
-            margin: 20px 0;
-            font-size: 18px;
+        .status-value {
+            font-weight: bold;
         }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #4CAF50;
+        .status-full {
+            color: #ff6b6b;
+        }
+        .status-not-full {
+            color: #4ecdc4;
+        }
+        .status-not-running {
+            color: #a8a8a8;
+        }
+        .video-container {
+            margin: 30px 0;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .video-container h2 {
+            margin-top: 0;
+            color: #fff;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        .video-feed {
+            width: 100%;
+            max-width: 1200px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        .logout-btn {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
             color: white;
-            border: none;
-            border-radius: 5px;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        a {
+            text-decoration: none;
+            color: #4ecdc4;
+            transition: color 0.3s ease;
+        }
+        a:hover {
+            color: #45b7af;
         }
     </style>
 </head>
 <body>
-    <h1>Elevator Monitor</h1>
-    <div class="status">
-        <p>Running: <span id="running-status">Checking...</span></p>
-        <p>Status: <span id="elevator-status">Checking...</span></p>
-        <p>FPS: <span id="fps-status">Checking...</span></p>
+    <div class="container">
+        <div class="header">
+            <h1>Elevator Monitor - User Panel</h1>
+            <div>
+                <a href="/admin" style="margin-right: 15px;">Switch to Admin View</a>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+
+        <div class="status-panel">
+            <h2>System Status</h2>
+            <div class="status-item">
+                <span>Running:</span>
+                <span id="running-status" class="status-value">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span>Status:</span>
+                <span id="elevator-status" class="status-value">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span>FPS:</span>
+                <span id="fps-status" class="status-value">Checking...</span>
+            </div>
+        </div>
+
+        <div class="video-container">
+            <h2>Camera Feed</h2>
+            <img src="{{ url_for('video_feed') }}" class="video-feed" alt="Camera Feed">
+        </div>
     </div>
-    <img src="{{ url_for('video_feed') }}" alt="Camera Feed">
+
     <script>
         function updateStatus() {
             fetch('/status')
@@ -44,12 +146,20 @@
                 .then(data => {
                     document.getElementById('running-status').textContent = data.running ? 'Yes' : 'No';
                     document.getElementById('fps-status').textContent = data.fps;
-                    document.getElementById('elevator-status').textContent = data.status;
+                    
+                    const statusElement = document.getElementById('elevator-status');
+                    statusElement.textContent = data.status;
+                    statusElement.className = 'status-value ' + 
+                        (data.status === 'FULL' ? 'status-full' : 
+                         data.status === 'NOT FULL' ? 'status-not-full' : 'status-not-running');
                 })
                 .catch(error => console.error('Error fetching status:', error));
         }
+
+        // Update status every second
         setInterval(updateStatus, 1000);
+        // Initial update
         updateStatus();
     </script>
 </body>
-</html>
+</html> 
