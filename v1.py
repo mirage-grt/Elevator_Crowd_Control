@@ -3,14 +3,28 @@ import numpy as np
 import os
 
 def capture_image():
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Error: Could not open camera.")
+        return None
+
+    ret, frame = cap.read()
+    cap.release()
+
+    if not ret:
+        print("Error: Failed to capture image.")
+        return None
+
     if not os.path.exists("sample_images"):
         os.makedirs("sample_images")
-    
-    img = np.zeros((500, 500, 3), dtype=np.uint8)
-    green = (0, 255, 0)
-    cv2.rectangle(img, (100, 100), (400, 400), green, -1)
+
     img_path = "sample_images/elevator.jpg"
-    cv2.imwrite(img_path, img)
+    cv2.imwrite(img_path, frame)
+    
+    cv2.imshow("Captured Image", frame)
+    cv2.waitKey(2000)
+    cv2.destroyAllWindows()
+    
     return img_path
 
 def detect_occupancy(image_path):
@@ -26,12 +40,19 @@ def detect_occupancy(image_path):
 
     green_ratio = green_pixels / total_pixels
 
-    return "FULL" if green_ratio < 0.2 else "NOT FULL"
+    result = "FULL" if green_ratio < 0.2 else "NOT FULL"
+
+    cv2.imshow("Processed Image", mask)
+    cv2.waitKey(2000)
+    cv2.destroyAllWindows()
+
+    return result
 
 def main():
     image_path = capture_image()
-    status = detect_occupancy(image_path)
-    print("Elevator Status:", status)
+    if image_path:
+        status = detect_occupancy(image_path)
+        print("Elevator Status:", status)
 
 if __name__ == "__main__":
     main()
